@@ -1,0 +1,19 @@
+<h3>End your membership</h3>
+
+<% IF confirmed %>
+	<br />
+	Your account has been deleted.
+<% ELSE %>
+	<br />
+	Ending your membership on <% settings.appname %> means that we delete all your data and your user account.
+	<br />Are you sure?
+	<br /><br />
+	<form action="/settings" method="get">
+		<input name="Submit" value="No, I want to keep my account" type="submit" style="display: inline;" />
+	</form>
+	<form action="/end_membership" method="post">
+		<input type="hidden" name="confirmed" value="1" />
+		<input name="Submit" value="Yes, end my membership" type="submit" />
+	</form>
+<% END %>
+

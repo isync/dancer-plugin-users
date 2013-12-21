@@ -1,0 +1,28 @@
+<% IF user.id %>
+	<h2>Register</h2>
+
+	You are already registered and logged in.
+	<br />
+	<br />You can <a href="/logout">log out here</a>.
+<% ELSE %>
+	<h2>Register</h2>
+
+	<% IF err %><div style="margin-bottom: 10px;">Error:<br><% err %></div><% END %>
+	<form action="/register" method="post">
+	<div>
+		<label>Username:</label><input type="text" name="nickname" value="<% nickname %>" id="nickname" />
+	</div>
+	<div>
+		<label>Password:</label><input type="password" name="password" />
+	</div>
+	<div>
+		<label>&nbsp;</label><input type="submit" value="Register" />
+		<div style="margin-top: 10px;" class="smallFont">By registering, you agree to our <a href="/terms">terms of service and use</a>.</div>
+	</div>
+	</form>
+	<script type="text/javascript">
+		/* <![CDATA[ */
+			document.getElementById('nickname').focus();
+		 /* ]]> */
+	</script>
+<% END %>

@@ -1,0 +1,22 @@
+<h2>OpenID Login</h2>
+
+<% IF user.id %>
+	You are already logged in.
+	<br />
+	<br />You can <a href="/logout">log out here</a>.
+<% ELSE %>
+	<% IF err %><span>Error: <% err %></span><% END %>
+	<form action="/openid_login" method="post">
+	<div>
+		<label>OpenID URL:</label><input type="text" name="openid_url" id="openid_url" />
+	</div>
+	<div>
+		<label>&nbsp;</label><input type="submit" value="Login" />
+	</div>
+	</form>
+	<script type="text/javascript">
+		/* <![CDATA[ */
+			document.getElementById('openid_url').focus();
+		 /* ]]> */
+	</script>
+<% END %>

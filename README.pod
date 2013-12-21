@@ -1,0 +1,116 @@
+=pod
+
+=head1 NAME
+
+Dancer::Plugin::Users - Adds user logic, routines and OpenID auth to Dancer apps
+
+=head1 SYNOPSIS
+
+	use Dancer::Plugin::Users;
+
+=head1 DESCRIPTION
+
+This module adds one flavour of basic logic and routes it needs to enable users
+of your web application to register, log in and out and end their association.
+
+As bonus, it also offers L<OpenID|http://en.wikipedia.org/wiki/OpenID> logins! Yay!
+
+=head1 DATABASE & SESSION
+
+The plugin assumes that L<Dancer::Plugin::Database> is in use and some other
+plugin is offering a session() store. Upon app startup, Dancer::Plugin::Users will
+connect to database table 'users', which is created if it doesn't exist.
+
+=head1 ROUTES
+
+The module adds six routes to your application, hardcoded. Although you can change
+their URLs from the config files:
+
+	/login
+	/openid_login
+	/logout
+	/register
+	/openid_register
+	/end_membership
+
+Each route relies on a template of the same name. The examples folder in this package
+should have some basic templates for you to start from.
+
+=head1 CONFIGURATION
+
+In config files, you can set these variables:
+
+	plugins:
+	  Users:
+	    route_login: "/login"
+	    route_openid_login: "/openid_login"
+	    route_logout: "/logout"
+	    route_register: "/register"
+	    route_openid_register: "/openid_register"
+	    route_end_membership: "/end_membership"
+	    reserved_logins: "admin root superuser demo Anonymous test"	  # space separated, case-insensitive
+	    db_table: "users"
+
+The example also shows the defaults, so all this can be left out if these are okay for you.
+
+=head1 USAGE
+
+In templates, for example:
+
+	<% IF session.user.id %>
+		Hello <a href="/user/<% session.user.id %>"><% session.user.nickname %></a> | <a href="/user/<% session.user.id %>">My profile</a> | <a href="/logout">logout</a>
+	<% ELSE %>
+		<a href="/login" rel="nofollow">login</a> . <a href="/register" rel="nofollow">register</a>
+	<% END %>
+
+In your route's code:
+
+	# This is what's done after a sucessful login
+	session 'user' => {
+		id		=> $user->{id},
+		nickname	=> $user->{nickname},
+		openid		=> $verified_identity->{identity}, # only on openID logins
+	};
+
+	# add this somewhere to check if a visitor is logged-in
+	forward '/login' unless session('user');
+
+=head1 BACKGROUND
+
+I took inspiration from the audacity of L<Locale::Wolowitz> to do something in
+'yet another way'. The result is a wild blend of what would normally end up in more
+focused, separate modules, probably within the ::Auth or some user management namespace - 
+only here, it's all packaged in one single (light) module that 'simply works'.
+
+It's meant less to be a well thought out authentication module, or a complete user
+management add-on, and is far from being a framework. It's more a set of common
+practices, routines and tools I tend to throw-in when I build webapps that know
+about the concepts of "users" and "logins". As such, it doesn't come with ready-built
+templates, (as you'd have to customise them anyway), it makes a few assumtions
+about application flow and is not fully configurable. Sorry for that. It's just
+what looks sane to me. Anyway, I share it here as it may be of use for like-minded
+developers, and it's handy to have it up on CPAN.
+
+=head1 BUGS & CAVEATS
+
+As I think the default configuration is the most practical, that's what I
+use and that's the proven one. As a result, changing settings is not that well tested.
+
+The database currently holds only one OpenID peer. That might be a limitation if
+you want to offer your users multiple OpenID authorities to log into a single account
+on your webapp. 
+
+In case you found anything obvious to fix/change/improve, feel free to contribute
+on github.
+
+=head1 SEE ALSO
+
+For completeness, last time I looked, these authentication-related Dancer plugins
+were on CPAN:
+L<Dancer::Plugin::Auth::Extensible>, L<Dancer::Plugin::Auth::RBAC>, L<Dancer::Plugin::Auth::Twitter>,
+L<Dancer::Plugin::Auth::Github>, L<Dancer::Plugin::Authen::Simple>, L<Dancer::Plugin::Facebook>,
+L<Dancer::Auth::GoogleAuthenticator>
+
+=head1 COPYRIGHT & LICENSE
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself

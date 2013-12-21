@@ -1,0 +1,10 @@
+MANIFEST
+LICENSE
+Makefile.PL
+README.pod
+lib/Dancer/Plugin/Users.pm
+examples/end_membership.tt
+examples/login.tt
+examples/openid_login.tt
+examples/openid_register.tt
+examples/register.tt
