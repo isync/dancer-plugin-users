@@ -9,7 +9,7 @@ use Digest::SHA1;
 use LWPx::ParanoidAgent;
 use Data::Dumper;
 
-our $VERSION = '0.1';
+our $VERSION = '0.02';
 
 our $conf = config->{plugins}->{Users}; # plugin_setting();
 $conf->{route_login}		||= '/login';
@@ -387,6 +387,9 @@ of your web application to register, log in and out and end their association.
 
 As bonus, it also offers L<OpenID|http://en.wikipedia.org/wiki/OpenID> logins! Yay!
 
+For all the Why & How, you might also want to check out the L<thread of the original pull-request|https://github.com/PerlDancer/Dancer/pull/829>
+this module is based on, in addition to the "background" section further down.
+
 =head1 DATABASE & SESSION
 
 The plugin assumes that L<Dancer::Plugin::Database> is in use and some other
@@ -461,7 +464,9 @@ about the concepts of "users" and "logins". As such, it doesn't come with ready-
 templates, (as you'd have to customise them anyway), it makes a few assumtions
 about application flow and is not fully configurable. Sorry for that. It's just
 what looks sane to me. Anyway, I share it here as it may be of use for like-minded
-developers, and it's handy to have it up on CPAN.
+developers, and it's handy to have it up on GitHub. Yes, read that again, GitHub 
+only for now, as reserving the Dancer::Plugin::Users namespace might be a bit too
+audacious.
 
 =head1 BUGS & CAVEATS
 
