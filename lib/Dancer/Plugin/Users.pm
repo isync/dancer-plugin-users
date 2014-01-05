@@ -508,7 +508,7 @@ audacious.
 =head1 EXCOURSE ON PASSWORDS
 
 Weak, common or colloquially 'bad' passwords are a security threat for your web
-applications. As such, this modules currently requires passwords to be at least 6
+applications. As such, this module currently requires passwords to be at least 6
 characters long and matches against a regex with a very limited set of weak passwords.
 This can be considered as being an absolute minimum, but probably better than having
 no checks at all. And of course, these checks are only done within the local /register
