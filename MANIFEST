@@ -1,5 +1,6 @@
 MANIFEST
 LICENSE
+Changes
 Makefile.PL
 README.pod
 lib/Dancer/Plugin/Users.pm

@@ -1,0 +1,14 @@
+Revision history for Dancer::Plugin::Users
+
+0.03	2014-01-05
+	- password blacklisting regex improved and now get precompiled
+	- password blacklisting regex user appendable
+	- after_login redirect now configurable
+	- More POD, on password strength checks
+	- Added a Changes file
+
+0.02	2013-12-23
+	- POD changes
+
+0.01	2013-12-21
+	- First release.

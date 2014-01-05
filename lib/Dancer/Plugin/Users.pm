@@ -9,23 +9,38 @@ use Digest::SHA1;
 use LWPx::ParanoidAgent;
 use Data::Dumper;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
-our $conf = config->{plugins}->{Users}; # plugin_setting();
+our $conf = plugin_setting(); # config->{plugins}->{Users};
 $conf->{route_login}		||= '/login';
 $conf->{route_openid_login}	||= '/openid_login';
 $conf->{route_logout}		||= '/logout';
 $conf->{route_register} 	||= '/register';
 $conf->{route_openid_register}	||= '/openid_register';
 $conf->{route_end_membership}	||= '/end_membership';
+$conf->{after_login}		||= sub { return '/user/'. $_[0]->{id}; };
 $conf->{reserved_logins}	||= 'admin root superuser demo Anonymous test';
+$conf->{reserved_passwords}	||= undef;
 $conf->{db_table}		||= 'users';
+
+## eval if $conf->{after_login} is only a string
+unless( ref($conf->{after_login}) eq 'CODE' ){
+	$conf->{after_login} = eval($conf->{after_login});
+	die $@ if $@;
+	debug("Eval'ed \$conf->{after_login} code-ref");
+}
 
 ## build and precompile reserved_logins regex
 if($conf->{reserved_logins}){
 	$conf->{reserved_logins_regex} = '^' . join('$|^', split(/\s+/,$conf->{reserved_logins}) ) . '$';
 	$conf->{reserved_logins_regex} = qr/$conf->{reserved_logins_regex}/i;
 }
+
+## precompile our simplistic password-blacklister
+our $weak_passwords_regex = '^12345|^password|^password\d+|^iloveyou$|^abc123|^123abc|^123123|654321$|^0{6,}$|^1{6,}$|^6{6,}$|^a{6,}$|^princess$|^nicole$|^dancer$|^rockyou$|^babygirl$|^monkey$|^qwerty$|^qwertz$|^letmein$|^asdfgh$';
+$weak_passwords_regex .= '|^'. config->{appname} .'$' if config->{appname};
+$weak_passwords_regex .= '|^' . join('$|^', split(/\s+/,$conf->{reserved_passwords}) ) . '$' if $conf->{reserved_passwords};
+$weak_passwords_regex = qr/$weak_passwords_regex/i;
 
 ## Check if we can get a database connection
 our $dbh = database($conf->{db_connection_name});
@@ -85,7 +100,7 @@ any ['get', 'post'] => $conf->{route_login} => sub {
 				id		=> $user->{id},
 				nickname	=> $user->{nickname},
 			};
-			return redirect "/user/$user->{id}";
+			return redirect $conf->{after_login}->($user);
 		}
 	}
 
@@ -137,7 +152,8 @@ any ['get', 'post'] => $conf->{route_openid_login} => sub {
 						nickname	=> $user->{nickname},
 						openid		=> $verified_identity->{identity},
 					};
-					return redirect "/user/$user->{id}";
+					# return redirect "/user/$user->{id}";
+					return redirect $conf->{after_login}->($user);
 				}else{			
 					my $sreg = $verified_identity->extension_fields('http://openid.net/extensions/sreg/1.1');
 
@@ -255,7 +271,7 @@ any ['get', 'post'] => $conf->{route_register} => sub {
 			push(@err, 'Passwords must be at least 6 characters long.');
 		}
 		## check if password is too weak
-		if( param('password') =~ /^12345|^password$|^iloveyou$|^abc123|^123abc|^princess$|^nicole$|^dancer$|^rockyou$|^babygirl$|^monkey$|^qwerty$|^qwertz$|^letmein$/ ){
+		if( param('password') =~ $weak_passwords_regex ){
 			push(@err, 'Please choose a stronger password.');
 		}
 
@@ -266,13 +282,16 @@ any ['get', 'post'] => $conf->{route_register} => sub {
 			$users->execute( param('nickname'), passphrase( param('password') )->generate()->rfc2307() );
 			my $user_id = setting('plugins')->{Database}->{driver} eq 'mysql' ? database()->{'mysql_insertid'} : database()->sqlite_last_insert_rowid();
 
-			## log user in
-			session 'user' => {
+			my $user = {
 				id		=> $user_id,
 				nickname	=> param('nickname'),
 			};
 
-			return redirect '/user/'.$user_id;
+			## log user in
+			session 'user' => $user;
+
+			# return redirect '/user/'.$user_id;
+			return redirect $conf->{after_login}->($user);
 		}
 	}
 
@@ -328,13 +347,16 @@ any ['get', 'post'] => $conf->{route_openid_register} => sub {
 			$users->execute( $so->{identity}, param('nickname'), $so->{email},$so->{fullname},$so->{dob},$so->{gender},$so->{postcode},$so->{country},$so->{language},$so->{timezone},$so->{avatar} );
 			my $user_id = setting('plugins')->{Database}->{driver} eq 'mysql' ? database()->{'mysql_insertid'} : database()->sqlite_last_insert_rowid();
 
-			## log user in
-			session 'user' => {
+			my $user = {
 				id		=> $user_id,
 				nickname	=> param('nickname'),
 			};
 
-			return redirect '/user/'.$user_id;
+			## log user in
+			session 'user' => $user;
+
+			# return redirect '/user/'.$user_id;
+			return redirect $conf->{after_login}->($user);
 		}
 	}
 
@@ -396,6 +418,12 @@ The plugin assumes that L<Dancer::Plugin::Database> is in use and some other
 plugin is offering a session() store. Upon app startup, Dancer::Plugin::Users will
 connect to database table 'users', which is created if it doesn't exist.
 
+In terms of password storage, we are on the safe side by relying on L<Dancer::Plugin::Passphrase>
+which employs best practice by hashing and per-user-salting passwords, among others. 
+When we process registrations, this module here also uses a simple regex to blacklist
+very common passwords but that is only considered as being a minimal fail-safe default. 
+See the "Excourse" section below for some musings on how to improve that.
+
 =head1 ROUTES
 
 The module adds six routes to your application, hardcoded. Although you can change
@@ -423,10 +451,19 @@ In config files, you can set these variables:
 	    route_register: "/register"
 	    route_openid_register: "/openid_register"
 	    route_end_membership: "/end_membership"
+	    after_login: "sub { return '/user/'. $_[0]->{id}; }"
 	    reserved_logins: "admin root superuser demo Anonymous test"	  # space separated, case-insensitive
+	    reserved_passwords: undef	  # space separated, case-insensitive, appended to internal regex
 	    db_table: "users"
 
-The example also shows the defaults, so all this can be left out if these are okay for you.
+The example also shows the defaults, so all this can be left out if these are okay
+for you.
+
+The variable "after_login" is special in such regard that if it is set in one of
+the config files, the string is eval()'ed upon module-load to replace the default
+internal anon-code-ref pictured above. It is expected that it contains a sub that
+can process the passed $_[0], which is a hash-ref populated with at least user->{id}
+and $user->{nickname}.
 
 =head1 USAGE
 
@@ -467,6 +504,83 @@ what looks sane to me. Anyway, I share it here as it may be of use for like-mind
 developers, and it's handy to have it up on GitHub. Yes, read that again, GitHub 
 only for now, as reserving the Dancer::Plugin::Users namespace might be a bit too
 audacious.
+
+=head1 EXCOURSE ON PASSWORDS
+
+Weak, common or colloquially 'bad' passwords are a security threat for your web
+applications. As such, this modules currently requires passwords to be at least 6
+characters long and matches against a regex with a very limited set of weak passwords.
+This can be considered as being an absolute minimum, but probably better than having
+no checks at all. And of course, these checks are only done within the local /register
+route, but many OpenId providers probably have a superior scheme implemented.
+
+If you want to override this module's password checks (once the API to do that in
+a straightforward way materialises), here are some modules and things for you to
+consider:
+
+=over
+
+=item *
+
+You can impose different constraints upon passwords: require a minimum length, complexity
+or entropy, or do blacklisting (in whole or in parts) by using language dictionaries
+or (better) lists of passwords which are frequently used.
+
+Some approaches are light on resources and/or easily cachable within your application,
+while others, usually more complete solutions, come at the cost of a certain IO
+and/or CPU overhead.
+
+When using a dictionary, don't forget to add words that users usually I<see> while
+they choose a password on your site/ registration page, like your webapp's name.
+Just look at lists of leaked passwords from major sites: top used passwords usually
+are or contain the site's name or other (trade)marks related to the respective service.
+
+=item *
+
+L<Data::Password::Check::JPassword> provides a measurement of how strong a given
+password is - strings containing uppercase, lowercase, numbers, punctuation or other
+non-ascii stuff each increase the score.
+
+=item *
+
+L<Data::Password::Entropy> calculates a similar score, but on a more abstract basis,
+taking order, distance of chars etc. into account.
+
+=item *
+
+L<Data::Password> combines a number of constraints like length or order, and matches
+against spelling dictionaries usually available on *nix systems - albeit in simple
+'loop-through-file'-manner which might contribute to the overall IO burden of your
+webapp.
+
+=item *
+
+L<Data::Password::BasicCheck> looks for basics like minimum length and other more
+elaborate string permutations like roations, reorderings, etc. Well, and one other,
+less optimal thing, a 'maximum length', which might make some sense in... well,
+err, actually no sane scenario.
+
+=item *
+
+L<Data::Password::Common> Dagolden's shot at it matches passwords against a (one)
+dictionary file. It comes bundled with over half a million passwords better to be
+rejected and relies on L<Search::Dict> to loop in an optimized way though the dictionary
+(which has to be sorted for that to work, btw). Also, you can provide (roll) your
+own dictionary. A good (not language vocabulary only!) dictionary in combination
+with a minimum length constraint can be quite a complete solution.
+
+=item *
+
+L<Data::Password::Simple> is a simple module that combines a minimum length constraint
+and a dictionary matcher that keeps the whole dictionary after module-load in memory
+as a hash. This module is probably quite exactly what you would 'reinvent' when you
+want to avoid disk access completely. But make sure you have that RAM to spare when
+your dict reaches a certain size.
+
+=back
+
+Now it's on you to decide if you want to rely on clever calculations of a password's
+strength or on (in a reverse way) "brute-force" dictionary matching.
 
 =head1 BUGS & CAVEATS
 
