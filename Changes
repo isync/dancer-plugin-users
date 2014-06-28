@@ -1,5 +1,10 @@
 Revision history for Dancer::Plugin::Users
 
+0.04	2014-06-28
+	- configurable route_layout, default: main
+	- redirected user to referer in case the login prompt was the
+	  result of a visit to a certain page
+
 0.03	2014-01-05
 	- password blacklisting regex improved and now get precompiled
 	- password blacklisting regex user appendable

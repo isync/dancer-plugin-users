@@ -9,7 +9,7 @@ use Digest::SHA1;
 use LWPx::ParanoidAgent;
 use Data::Dumper;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 our $conf = plugin_setting(); # config->{plugins}->{Users};
 $conf->{route_login}		||= '/login';
@@ -18,7 +18,8 @@ $conf->{route_logout}		||= '/logout';
 $conf->{route_register} 	||= '/register';
 $conf->{route_openid_register}	||= '/openid_register';
 $conf->{route_end_membership}	||= '/end_membership';
-$conf->{after_login}		||= sub { return '/user/'. $_[0]->{id}; };
+$conf->{route_layout}		||= 'main';
+$conf->{after_login}		||= sub { request->referer && request->referer !~ /$conf->{route_login}/ ? return request->referer : return '/user/'. $_[0]->{id}; };
 $conf->{reserved_logins}	||= 'admin root superuser demo Anonymous test';
 $conf->{reserved_passwords}	||= undef;
 $conf->{db_table}		||= 'users';
@@ -47,8 +48,8 @@ our $dbh = database($conf->{db_connection_name});
 die "No database handle" if !$dbh;
 
 ## Check if the db has the users table
-my $check = database()->do("SELECT * FROM $conf->{db_table} LIMIT 1; "); # more portable than "SHOW TABLES LIKE 'x'"; also, we don't check for  or die database()->errstr
-unless($check){
+my $check = eval { database()->do("SELECT * FROM $conf->{db_table} LIMIT 1; "); }; # more portable than "SHOW TABLES LIKE 'x'"; also, we don't check for  or die database()->errstr
+unless($check && !$@){
 	Dancer::Logger::info("Creating database table '$conf->{db_table}'");
 
 	## create a user db with cache-fields for the 9 optional values supplied via OpenID
@@ -108,7 +109,7 @@ any ['get', 'post'] => $conf->{route_login} => sub {
 	template 'login.tt', {
 		err		=> $err,
 		title		=> 'Login',
-	};
+	}, { layout => $conf->{route_layout} };
 };
 
 
@@ -152,7 +153,6 @@ any ['get', 'post'] => $conf->{route_openid_login} => sub {
 						nickname	=> $user->{nickname},
 						openid		=> $verified_identity->{identity},
 					};
-					# return redirect "/user/$user->{id}";
 					return redirect $conf->{after_login}->($user);
 				}else{			
 					my $sreg = $verified_identity->extension_fields('http://openid.net/extensions/sreg/1.1');
@@ -228,7 +228,7 @@ any ['get', 'post'] => $conf->{route_openid_login} => sub {
 	template 'openid_login', {
 		err		=> $err,
 		title		=> 'OpenID Login',
-	};
+	}, { layout => $conf->{route_layout} };
 };
 
 
@@ -290,7 +290,6 @@ any ['get', 'post'] => $conf->{route_register} => sub {
 			## log user in
 			session 'user' => $user;
 
-			# return redirect '/user/'.$user_id;
 			return redirect $conf->{after_login}->($user);
 		}
 	}
@@ -301,7 +300,7 @@ any ['get', 'post'] => $conf->{route_register} => sub {
 		title	=> 'Register',
 		nickname => param('nickname'),
 		user	=> session('user'),
-	};
+	}, { layout => $conf->{route_layout} };
 };
 
 
@@ -355,7 +354,6 @@ any ['get', 'post'] => $conf->{route_openid_register} => sub {
 			## log user in
 			session 'user' => $user;
 
-			# return redirect '/user/'.$user_id;
 			return redirect $conf->{after_login}->($user);
 		}
 	}
@@ -366,7 +364,7 @@ any ['get', 'post'] => $conf->{route_openid_register} => sub {
 		title	=> 'OpenID Registration',
 		nickname=> param('openid')->{nickname} ? param('openid')->{nickname} : param('openid')->{display},
 		user	=> session('user'),
-	};
+	}, { layout => $conf->{route_layout} };
 };
 
 
@@ -385,7 +383,7 @@ any ['get', 'post'] => $conf->{route_end_membership} => sub {
 	template 'end_membership' => {
 		title		=> 'End your membership',
 		confirmed	=> param('confirmed'),
-	};
+	}, { layout => $conf->{route_layout} };
 };
 
 
