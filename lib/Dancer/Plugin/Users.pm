@@ -9,7 +9,7 @@ use Digest::SHA1;
 use LWPx::ParanoidAgent;
 use Data::Dumper;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 our $conf = plugin_setting(); # config->{plugins}->{Users};
 $conf->{route_login}		||= '/login';
@@ -19,7 +19,7 @@ $conf->{route_register} 	||= '/register';
 $conf->{route_openid_register}	||= '/openid_register';
 $conf->{route_end_membership}	||= '/end_membership';
 $conf->{route_layout}		||= 'main';
-$conf->{after_login}		||= sub { request->referer && request->referer !~ /$conf->{route_login}/ ? return request->referer : return '/user/'. $_[0]->{id}; };
+$conf->{after_login}		||= sub { request->referer && request->referer !~ /$conf->{route_login}|$conf->{route_register}/ ? return request->referer : return '/user/'. $_[0]->{id}; };
 $conf->{reserved_logins}	||= 'admin root superuser demo Anonymous test';
 $conf->{reserved_passwords}	||= undef;
 $conf->{db_table}		||= 'users';
