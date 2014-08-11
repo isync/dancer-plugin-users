@@ -6,8 +6,8 @@ Revision history for Dancer::Plugin::Users
 	- added sign-in via Twitter (based on Net::Twitter::Lite
 	  and OAuth v1.0a
 	- routes rearranged: openid_login is now /openid, complemented
-	  by new /oauth; view login now serves all login routes
-	- openid_register view relaced by modular register view
+	  by new /oauth; view /login now serves all login routes
+	- view /openid_register relaced by modular /register view
 	- users table scheme gets updated for new authen services,
 	  when used
 	- internal api for oauth2, many code changes
