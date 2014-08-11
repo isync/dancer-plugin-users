@@ -1,5 +1,14 @@
 =pod
 
+=head1 Please note
+
+As of version 0.06, this module is closed-source, following a
+L<delayed release scheme|http://en.wikipedia.org/wiki/Business_models_for_open-source_software#Delayed_open-sourcing>.
+OAuth authentication via Facebook, Google (OAuth2.0) and Twitter (OAuth1.0a) is
+supported since version 0.06. So the bad news is, that the tagline here on github
+is a bit over advertising what's puplicly available. The good news is, you can
+get a copy of the updated version with all the features. Simply contact me L<here|mailto:o.zucker@web.de>.
+
 =head1 NAME
 
 Dancer::Plugin::Users - Adds user logic, routines and OpenID auth to Dancer apps
